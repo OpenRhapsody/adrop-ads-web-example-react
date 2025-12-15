@@ -1,25 +1,27 @@
 # Adrop Ads Web SDK - React Example
 
-React 애플리케이션에서 @adrop/ads-web-sdk를 사용하여 광고를 표시하는 방법을 보여주는 예제 프로젝트입니다.
+[한국어 문서 보기 (Korean Documentation)](./README.ko.md)
 
-## 설치
+This is an example project demonstrating how to display ads in a React application using @adrop/ads-web-sdk.
+
+## Installation
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 의존성
+## Dependencies
 
-- **@adrop/ads-web-sdk**: ^1.0.1 - Adrop 광고 SDK
+- **@adrop/ads-web-sdk**: ^1.0.1 - Adrop advertising SDK
 - **React**: ^19.2.0
 - **TypeScript**: ~5.9.3
 
-## @adrop/ads-web-sdk 라이브러리 사용방법
+## How to Use @adrop/ads-web-sdk Library
 
-### 1. 기본 설정
+### 1. Basic Configuration
 
-#### AdropProvider로 앱 감싸기
+#### Wrapping App with AdropProvider
 
 ```tsx
 import { AdropProvider } from './contexts/adrop-provider'
@@ -28,10 +30,10 @@ function App() {
     return (
         <AdropProvider
             config={{
-                appId: 'YOUR_APP_ID',        // 필수: Adrop에서 발급받은 앱 ID
-                uid: 'user-12345',           // 필수: 사용자 고유 ID
-                debug: true,                 // 선택사항: 디버그 모드
-                appKey: 'YOUR_APP_KEY'       // 선택사항: 앱 키 (속성 업데이트 시 필요)
+                appId: 'YOUR_APP_ID',        // Required: App ID issued by Adrop
+                uid: 'user-12345',           // Required: Unique user ID
+                debug: true,                 // Optional: Debug mode
+                appKey: 'YOUR_APP_KEY'       // Optional: App key (needed for property updates)
             }}
         >
             <YourAppContent />
@@ -40,7 +42,7 @@ function App() {
 }
 ```
 
-#### useAdrop 훅 사용
+#### Using useAdrop Hook
 
 ```tsx
 import { useAdrop } from './hooks/useAdrop'
@@ -48,41 +50,132 @@ import { useAdrop } from './hooks/useAdrop'
 function SomeComponent() {
     const adrop = useAdrop()
     
-    // 설정 업데이트
+    // Update configuration
     adrop.setConfig({ uid: 'new-user-id' })
     
-    // 사용자 속성 설정
+    // Set user properties
     await adrop.metrics
         .setUserProperties({ last_login: new Date().toISOString() })
         .commit()
 }
 ```
 
-### 2. 이벤트 시스템
+### 2. Event System
 
-@adrop/ads-web-sdk는 다음과 같은 이벤트를 제공합니다:
+@adrop/ads-web-sdk provides the following events:
 
-- `AdropEvents.AD_RECEIVED`: 광고 수신 성공
-- `AdropEvents.AD_FAILED`: 광고 로드 실패
-- `AdropEvents.AD_NO_FILL`: 표시할 광고 없음
-- `AdropEvents.AD_IMPRESSION`: 광고 노출
-- `AdropEvents.AD_CLICKED`: 광고 클릭
-- `AdropEvents.AD_BACKFILL_NO_FILL`: 백필 광고 없음
+- `AdropEvents.AD_RECEIVED`: Ad successfully received
+- `AdropEvents.AD_FAILED`: Ad load failed
+- `AdropEvents.AD_NO_FILL`: No ads available to display
+- `AdropEvents.AD_IMPRESSION`: Ad impression
+- `AdropEvents.AD_CLICKED`: Ad clicked
+- `AdropEvents.AD_BACKFILL_NO_FILL`: No backfill ads available
 
 ```tsx
 import { AdropEvents } from '@adrop/ads-web-sdk'
 
-// 이벤트 리스너 등록
+// Register event listeners
 adrop.on(AdropEvents.AD_RECEIVED, (unit, adData) => {
-    console.log('광고 수신:', unit, adData)
+    console.log('Ad received:', unit, adData)
 }, { unit: 'YOUR_UNIT_ID' })
 ```
 
-## Banner 광고 사용 방법
+## Configuration Management
 
-Banner 광고는 SDK가 자동으로 HTML 요소에 광고를 렌더링하는 방식입니다.
+### UID Configuration
 
-### BannerAd 컴포넌트 사용
+The UID (User ID) is a unique identifier for each user and should be set during app initialization.
+
+```tsx
+// Recommended: Set during app initialization
+<AdropProvider
+    config={{
+        appId: 'YOUR_APP_ID',
+        uid: 'unique-user-id',  // Set initial UID here
+        debug: true
+    }}
+>
+    <App />
+</AdropProvider>
+
+// Runtime update (if necessary)
+function updateUID() {
+    const newUid = 'user-' + Math.random().toString(36).substring(2, 11)
+    adrop.setConfig({ uid: newUid })
+}
+```
+
+**Best Practice**: Set the UID during app initialization rather than updating it at runtime.
+
+### App Key Configuration
+
+The App Key is required for analytics and user property tracking features.
+
+```tsx
+// Recommended: Set during app initialization
+<AdropProvider
+    config={{
+        appId: 'YOUR_APP_ID',
+        uid: 'unique-user-id',
+        appKey: 'YOUR_APP_KEY',  // Set during initialization
+        debug: true
+    }}
+>
+    <App />
+</AdropProvider>
+
+// Runtime update (if necessary)
+function updateAppKey() {
+    adrop.setConfig({ appKey: 'YOUR_NEW_APP_KEY' })
+}
+```
+
+**Best Practice**: Include the App Key during app initialization for consistent analytics tracking.
+
+### User Properties Management
+
+User properties allow you to track additional user information for analytics.
+
+```tsx
+// Setting user properties
+async function updateUserProperties() {
+    await adrop.metrics
+        .setUserProperties({
+            last_login: new Date().toISOString(),
+            user_level: 5,
+            subscription_type: 'premium',
+            // Include ALL properties you want to keep
+        })
+        .commit()
+}
+```
+
+**Important Notes**:
+- `setUserProperties` **overwrites all existing properties**
+- Always include all properties you want to keep in each update
+- Properties not included in the update will be **deleted**
+
+```tsx
+// Example: Updating only one property while preserving others
+const currentProperties = {
+    user_level: 5,
+    subscription_type: 'premium'
+}
+
+// Update last_login while preserving other properties
+await adrop.metrics
+    .setUserProperties({
+        ...currentProperties,  // Preserve existing properties
+        last_login: new Date().toISOString()  // Add/update new property
+    })
+    .commit()
+```
+
+## How to Use Banner Ads
+
+Banner ads are automatically rendered by the SDK into HTML elements.
+
+### Using BannerAd Component
 
 ```tsx
 import { BannerAd } from './components/BannerAd'
@@ -91,31 +184,31 @@ function App() {
     return (
         <BannerAd
             request={{ 
-                unit: 'YOUR_BANNER_UNIT_ID'  // 필수: 광고 유닛 ID
+                unit: 'YOUR_BANNER_UNIT_ID'  // Required: Ad unit ID
             }}
             onAdReceived={(unit, adData) => {
-                console.log('배너 광고 수신:', unit, adData)
+                console.log('Banner ad received:', unit, adData)
             }}
             onAdFailed={(unit) => {
-                console.error('배너 광고 실패:', unit)
+                console.error('Banner ad failed:', unit)
             }}
             onAdNoFill={(unit) => {
-                console.warn('배너 광고 없음:', unit)
+                console.warn('Banner ad no fill:', unit)
             }}
             onAdImpression={(unit, adData) => {
-                console.log('배너 광고 노출:', unit, adData)
+                console.log('Banner ad impression:', unit, adData)
             }}
             onAdClicked={(unit, adData) => {
-                console.log('배너 광고 클릭:', unit, adData)
+                console.log('Banner ad clicked:', unit, adData)
             }}
         />
     )
 }
 ```
 
-### BannerAd 컴포넌트 구현 방법
+### BannerAd Component Implementation
 
-`src/components/BannerAd.tsx` 참고:
+See `src/components/BannerAd.tsx`:
 
 ```tsx
 import { AdropEvents, type AdropAdRequest } from '@adrop/ads-web-sdk'
@@ -130,11 +223,11 @@ export function BannerAd({ request, onAdReceived, ...callbacks }) {
         const unit = request?.unit
         if (!unit) return
 
-        // 이벤트 리스너 등록
+        // Register event listeners
         const listeners = [
             { event: AdropEvents.AD_RECEIVED, callback: onAdReceived },
             { event: AdropEvents.AD_FAILED, callback: onAdFailed },
-            // ... 기타 이벤트들
+            // ... other events
         ]
 
         listeners.forEach(({ event, callback }) => {
@@ -143,12 +236,12 @@ export function BannerAd({ request, onAdReceived, ...callbacks }) {
             }
         })
 
-        // 광고 렌더링
+        // Render ad
         if (containerRef.current) {
             adrop.renderAd(containerRef.current, request)
         }
 
-        // 클린업
+        // Cleanup
         return () => {
             listeners.forEach(({ event, callback }) => {
                 if (callback) {
@@ -158,21 +251,25 @@ export function BannerAd({ request, onAdReceived, ...callbacks }) {
         }
     }, [adrop, request, /* ...callbacks */])
 
-    return <div ref={containerRef} data-adrop-unit={request?.unit} />
+    return (
+        <div ref={containerRef} />
+        // OR <div data-adrop-unit={request?.unit} />
+    )
 }
 ```
 
-### 핵심 포인트
+### Key Points
 
-1. **data-adrop-unit 속성**: SDK가 광고를 렌더링할 때 참조하는 속성
-2. **adrop.renderAd()**: 컨테이너 요소에 광고를 렌더링
-3. **이벤트 필터링**: `{ unit }` 옵션으로 특정 유닛의 이벤트만 수신
+1. Two ways to render ads:
+   1. **data-adrop-unit attribute**: Attribute referenced by SDK when rendering ads
+   2. **adrop.renderAd()**: Renders ad into container element
+2. **Event filtering**: Receive events only for specific units with `{ unit }` option
 
-## Native 광고 사용 방법
+## How to Use Native Ads
 
-Native 광고는 개발자가 직접 UI를 구성하고 SDK가 데이터를 제공하는 방식입니다.
+Native ads allow developers to build custom UI while the SDK provides the data.
 
-### NativeAd 컴포넌트 사용
+### Using NativeAd Component
 
 ```tsx
 import { NativeAd } from './components/NativeAd'
@@ -181,23 +278,23 @@ function App() {
     return (
         <NativeAd
             request={{ 
-                unit: 'YOUR_NATIVE_UNIT_ID'  // 필수: Native 광고 유닛 ID
+                unit: 'YOUR_NATIVE_UNIT_ID'  // Required: Native ad unit ID
             }}
             onAdReceived={(unit, adData) => {
-                console.log('Native 광고 수신:', unit, adData)
+                console.log('Native ad received:', unit, adData)
             }}
             onAdFailed={(unit) => {
-                console.error('Native 광고 실패:', unit)
+                console.error('Native ad failed:', unit)
             }}
-            // ... 기타 이벤트 핸들러들
+            // ... other event handlers
         />
     )
 }
 ```
 
-### NativeAd 컴포넌트 구현 방법
+### NativeAd Component Implementation
 
-`src/components/NativeAd.tsx` 참고:
+See `src/components/NativeAd.tsx`:
 
 ```tsx
 import { AdropEvents, type AdropAdRequest } from '@adrop/ads-web-sdk'
@@ -209,10 +306,10 @@ export function NativeAd({ request, ...callbacks }) {
     const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // 이벤트 리스너 등록 (Banner와 동일)
+        // Register event listeners (same as Banner)
         const listeners = [
             { event: AdropEvents.AD_RECEIVED, callback: onAdReceived },
-            // ... 기타 이벤트들
+            // ... other events
         ]
 
         listeners.forEach(({ event, callback }) => {
@@ -222,14 +319,14 @@ export function NativeAd({ request, ...callbacks }) {
         })
 
         return () => {
-            // 클린업 로직
+            // Cleanup logic
         }
     }, [adrop, request, /* ...callbacks */])
     
     useEffect(() => {
         if (!ref.current) return
         
-        // trackMode: 1은 Native 광고용 설정
+        // trackMode: 1 is for Native ads
         adrop.renderAd(ref.current, {
             unit: request.unit,
             trackMode: 1
@@ -238,7 +335,7 @@ export function NativeAd({ request, ...callbacks }) {
 
     return (
         <div ref={ref}>
-            {/* Native 광고 UI 구성 */}
+            {/* Native ad UI structure */}
             <div>
                 <img data-adrop-native="profile.displayLogo" />
                 <span data-adrop-native="profile.displayName" />
@@ -256,33 +353,34 @@ export function NativeAd({ request, ...callbacks }) {
 }
 ```
 
-### Native 광고 데이터 속성
+### Native Ad Data Attributes
 
-Native 광고에서 사용할 수 있는 `data-adrop-native` 속성들:
+Available `data-adrop-native` attributes for Native ads:
 
-- `profile.displayLogo`: 광고주 프로필 이미지
-- `profile.displayName`: 광고주 이름
-- `asset`: 광고 메인 이미지
-- `headline`: 광고 제목
-- `body`: 광고 설명
-- `callToAction`: 액션 버튼 텍스트
+- `profile.displayLogo`: Advertiser profile image
+- `profile.displayName`: Advertiser name
+- `asset`: Main ad image
+- `headline`: Ad title
+- `body`: Ad description
+- `callToAction`: Action button text
+- `extra.{id}`: Additional text (configured in AdControl console)
 
-### 핵심 포인트
+### Key Points
 
-1. **trackMode: 1**: 네이티브 커스텀 UI를 구성할 때 설정
-2. **data-adrop-native 속성**: SDK가 광고 데이터를 주입할 요소들을 식별
-3. **커스텀 UI**: 개발자가 원하는 대로 광고 레이아웃 구성 가능
+1. **trackMode: 1**: Set when configuring native custom UI
+2. **data-adrop-native attributes**: Identifies elements where SDK will inject ad data
+3. **Custom UI**: Developers can configure ad layout as desired
 
-## 실제 사용 시 주의사항
+## Important Notes for Production
 
-1. **앱 ID와 유닛 ID**: `YOUR_APP_ID`, `YOUR_BANNER_UNIT_ID`, `YOUR_NATIVE_UNIT_ID` 등을 실제 Adrop에서 발급받은 값으로 교체
-2. **사용자 ID**: 실제 사용자를 구분할 수 있는 고유한 ID 사용
-3. **이벤트 핸들링**: 광고 수신, 실패, 클릭 등의 이벤트를 적절히 처리
-4. **테스트**: 개발 환경에서는 `debug: true` 옵션 사용 권장
+1. **App ID and Unit IDs**: Replace `YOUR_APP_ID`, `YOUR_BANNER_UNIT_ID`, `YOUR_NATIVE_UNIT_ID`, etc. with actual values issued by Adrop
+2. **User ID**: Use unique IDs that can distinguish actual users
+3. **Event Handling**: Properly handle events like ad reception, failure, and clicks
+4. **Testing**: Recommended to use `debug: true` option in development environment
 
-## 예제에서 사용된 테스트 유닛 ID
+## Test Unit IDs Used in Example
 
 - Banner: `PUBLIC_TEST_UNIT_ID_375_80`
 - Native: `PUBLIC_TEST_UNIT_ID_NATIVE`
 
-실제 서비스에서는 Adrop에서 발급받은 정식 유닛 ID를 사용해야 합니다.
+For production services, use official unit IDs issued by Adrop.
